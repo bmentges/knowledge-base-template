@@ -1,0 +1,19 @@
+{
+  "name": "llm-wiki",
+  "version": "0.1.0",
+  "description": "Build and maintain personal knowledge bases with Claude. Bootstrap a wiki, ingest sources, query the knowledge, and lint for health — the LLM Wiki pattern as a plugin.",
+  "author": {
+    "name": "Bruno Mentges"
+  },
+  "homepage": "https://github.com/bmentges/knowledge-base-template",
+  "repository": "https://github.com/bmentges/knowledge-base-template",
+  "license": "MIT",
+  "keywords": [
+    "knowledge-base",
+    "wiki",
+    "obsidian",
+    "second-brain",
+    "memory",
+    "notes"
+  ]
+}

@@ -1,102 +1,148 @@
-# Knowledge Base Template
+# llm-wiki
 
-A template for building persistent, LLM-maintained knowledge bases using [Obsidian](https://obsidian.md/) as the viewer and any LLM coding agent as the writer.
+A Claude Code plugin for building and maintaining **persistent, LLM-maintained knowledge bases** in [Obsidian](https://obsidian.md/) format. One install, four skills, and any directory becomes a compounding wiki the LLM writes for you.
 
-Based on [Andrej Karpathy's LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) pattern, extended with lifecycle and scaling patterns from [agentmemory](https://github.com/rohitg00/agentmemory).
+Based on [Andrej Karpathy's LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f), extended with scaling patterns from [agentmemory](https://github.com/rohitg00/agentmemory). Full acknowledgements in [`origin/CREDITS.md`](origin/CREDITS.md).
 
-## The idea
+> **Status.** Early, not yet on a public Claude Code marketplace. Install by cloning — see [Install](#install).
 
-Instead of uploading documents to an LLM and re-deriving answers every time (RAG), the LLM **builds and maintains a wiki** for you. You provide sources and ask questions. The LLM writes pages, cross-references entities, flags contradictions, and keeps everything consistent. The knowledge compounds over time rather than being thrown away after each chat.
+## The idea in one line
 
-You never write the wiki yourself. Obsidian is the IDE; the LLM is the programmer; the wiki is the codebase.
+Stop re-deriving knowledge with RAG every time; have the LLM **compile** it into a structured wiki that compounds over time. You curate sources and ask questions. The LLM does the rest — summarising, cross-referencing, flagging contradictions, keeping everything consistent.
+
+Obsidian is the IDE. The LLM is the programmer. The wiki is the codebase.
+
+For the long version, read [`origin/llm-wiki.md`](origin/llm-wiki.md) (the original pattern) and [`origin/llm-wiki-v2.md`](origin/llm-wiki-v2.md) (scaling extensions).
+
+## What you get
+
+Four skills, each triggered by natural language:
+
+| Skill | Say something like… | What it does |
+|---|---|---|
+| **`wiki-bootstrap`** | "set up a new knowledge base here" · "build me a second brain" · "start a research vault" | Inspects the directory, interviews you about use case and domain, scaffolds `raw/` + `wiki/`, writes a tailored `CLAUDE.md` schema, seeds `index.md` / `log.md` / `overview.md`, configures `.obsidian/`. One-shot per vault. |
+| **`wiki-ingest`** | "ingest this" · "add this article" · "file this paper" · "process this meeting" | Reads one source, writes a summary page in `wiki/sources/`, updates entity & concept pages, updates the index, appends to the log. Flags contradictions; does not silently overwrite existing claims. |
+| **`wiki-query`** | "what does the wiki say about X?" · "query the wiki" · "compare A and B from the vault" | Searches the wiki, synthesises an answer with wikilink citations, picks the right output format (prose, table, timeline, mermaid). Offers to file substantive answers as `wiki/analysis/` pages so explorations compound. |
+| **`wiki-lint`** | "lint the wiki" · "health check" · "clean up the wiki" | Runs seven checks: frontmatter drift, broken wikilinks, orphans, missing cross-references, contradictions, index freshness, overview staleness. Auto-fixes safe issues, flags the rest for you to decide. |
+
+All four skills read the vault's `CLAUDE.md` at runtime, so the process is plugin-level but the **schema is per-vault** — each vault's conventions, entity types, and page shapes travel with it.
+
+## Capabilities
+
+- **Any domain.** Personal (goals, journal, self-improvement), research (topic deep-dives), book companions, business/team wikis, course notes, competitive analysis, trip planning — bootstrap interviews you and tailors the schema.
+- **Obsidian-native output.** Wikilinks, callouts, YAML frontmatter, mermaid diagrams. Configured so Graph View and Dataview work out of the box.
+- **Confidence scoring.** Every page carries a `0.0–1.0` confidence value; skills weigh older/newer claims and surface contradictions rather than overwriting.
+- **Chronological log.** Append-only `wiki/log.md` is grep-parseable: `grep "^## \[" wiki/log.md` gives you the full timeline.
+- **Safe defaults.** Bootstrap never overwrites silently; ingest never modifies `raw/`; lint never resolves contradictions unilaterally; nothing commits to git unless you ask.
 
 ## Prerequisites
 
-- [Obsidian](https://obsidian.md/) installed
-- An LLM coding agent with file access. Any of these work:
-  - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (CLI or IDE extension)
-  - [OpenAI Codex](https://openai.com/index/codex/)
-  - [Cursor](https://cursor.sh/), [Windsurf](https://codeium.com/windsurf), or any AI-enabled editor
-  - Any agent that can read/write local files
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (CLI, IDE extension, or desktop).
+- [Obsidian](https://obsidian.md/) for browsing the vault (optional — everything is plain markdown).
 
-## Setup
+## Install
 
-### 1. Clone this template
+Clone the repo once, then register it as a local marketplace in Claude Code.
 
 ```bash
-git clone https://github.com/bmentges/knowledge-base-template.git my-knowledge-base
-cd my-knowledge-base
+# 1. Clone anywhere on your machine
+git clone https://github.com/bmentges/knowledge-base-template ~/code/llm-wiki
+cd ~/code/llm-wiki
 ```
 
-### 2. Open a conversation with your LLM agent
-
-Open your LLM coding agent in the cloned directory. Then send it the following prompt, adapted to your use case:
-
----
-
-**The prompt:**
-
-> Help me set up this knowledge base in wiki format, using Obsidian format.
->
-> Please read the files in `config/` to understand the LLM Wiki pattern. Then set up this repository as a knowledge base for **[describe your purpose here]**.
->
-> Specifically:
-> 1. Create the directory structure (raw sources, wiki pages, assets)
-> 2. Write a `CLAUDE.md` (or equivalent schema file) tailored to my use case, defining page types, entity types, naming conventions, ingest/query/lint workflows, and cross-referencing rules
-> 3. Create the initial `wiki/index.md` and `wiki/log.md` files
-> 4. Create a starter overview page in the wiki
-> 5. Configure `.obsidian/` settings if needed (attachment folder, etc.)
->
-> My use case: **[fill in one of the following, or write your own]**
-> - *Personal*: tracking goals, health, psychology, self-improvement, journal entries, articles, podcast notes
-> - *Research*: deep-diving a topic over weeks/months with papers, articles, reports, and an evolving thesis
-> - *Book companion*: reading a book chapter by chapter, building pages for characters, themes, plot threads
-> - *Business*: internal knowledge base fed by meeting notes, Slack threads, project docs, customer calls
-> - *Course notes*: structured study wiki for a class or certification
-> - *Other*: [describe it]
-
----
-
-### 3. Open in Obsidian
-
-Once the LLM finishes the setup:
+Then, inside Claude Code:
 
 ```
-Open Obsidian -> Open folder as vault -> select your cloned directory
+/plugin marketplace add ~/code/llm-wiki
+/plugin install llm-wiki@llm-wiki
 ```
 
-You now have a live wiki. The LLM writes; you browse.
+Verify the skills are loaded — start a fresh Claude Code session and run:
 
-## What it looks like after setup
+```
+/plugin
+```
+
+You should see `llm-wiki` listed as installed, with four skills: `wiki-bootstrap`, `wiki-ingest`, `wiki-query`, `wiki-lint`.
+
+### Updating
+
+```bash
+cd ~/code/llm-wiki
+git pull
+```
+
+Then in Claude Code: `/plugin marketplace update llm-wiki`.
+
+### Uninstall
+
+```
+/plugin uninstall llm-wiki@llm-wiki
+/plugin marketplace remove llm-wiki
+```
+
+### Fallback (if the plugin flow doesn't work yet)
+
+The skills are plain markdown files and work as user-level skills too. Symlink them in:
+
+```bash
+mkdir -p ~/.claude/skills
+for s in wiki-bootstrap wiki-ingest wiki-query wiki-lint; do
+  ln -s ~/code/llm-wiki/skills/$s ~/.claude/skills/$s
+done
+```
+
+Skills are then available in every Claude Code session, no plugin commands needed.
+
+## Use
+
+### 1. Create a new wiki
+
+In the directory you want the vault to live:
+
+```
+Claude, set up a new knowledge base here for my research on distributed systems.
+```
+
+`wiki-bootstrap` will interview you (use case, entity types, source types, scale), show the plan, then scaffold the vault. If the directory isn't empty, it walks you through placement options — bootstrap in-place, use a subdirectory, or pick a different directory. It never overwrites existing files silently.
+
+### 2. Open in Obsidian
+
+```
+Obsidian → Open folder as vault → select the directory
+```
+
+### 3. Daily workflow
+
+```
+# Drop an article into raw/, then:
+Claude, ingest raw/2026-04-17-paxos-explained.md
+
+# Later, ask:
+Claude, what does the wiki say about consensus algorithms?
+
+# Periodically:
+Claude, lint the wiki.
+```
+
+## What a vault looks like
 
 ```
 my-knowledge-base/
 |
-|-- config/                     # Template docs (you can delete after setup)
-|   |-- LLM-WIKI.md
-|   +-- LLM-WIKI-v2.md
-|
 |-- raw/                        # Your source documents (immutable)
 |   |-- assets/                 # Images, PDFs, attachments
-|   |-- article-on-topic-x.md
-|   |-- meeting-notes-2026-04.md
-|   +-- paper-something.pdf
+|   |-- 2026-04-17-paxos-explained.md
+|   +-- meeting-notes-2026-04.md
 |
 |-- wiki/                       # LLM-generated pages (the knowledge base)
 |   |-- index.md                # Catalog of all pages with summaries
 |   |-- log.md                  # Chronological record of operations
-|   |-- overview.md             # High-level synthesis of everything
+|   |-- overview.md             # High-level synthesis
 |   |-- entities/               # People, projects, tools, orgs
-|   |   |-- redis.md
-|   |   +-- project-alpha.md
 |   |-- concepts/               # Ideas, patterns, theories
-|   |   |-- caching-strategies.md
-|   |   +-- event-driven-architecture.md
 |   |-- sources/                # One summary page per ingested source
-|   |   |-- article-on-topic-x.md
-|   |   +-- paper-something.md
 |   +-- analysis/               # Filed query results, comparisons, deep dives
-|       +-- redis-vs-memcached.md
 |
 |-- CLAUDE.md                   # Schema: rules, conventions, workflows
 +-- .obsidian/                  # Obsidian vault config
@@ -107,59 +153,77 @@ my-knowledge-base/
 ```mermaid
 graph TD
     YOU([You]) -->|drop sources| RAW[raw/]
-    YOU -->|ask questions| LLM([LLM Agent])
-    LLM -->|reads| RAW
-    LLM -->|reads & writes| WIKI[wiki/]
-    LLM -->|follows rules from| SCHEMA[CLAUDE.md]
+    YOU -->|ask questions| CLAUDE([Claude + skills])
+    CLAUDE -->|reads| RAW
+    CLAUDE -->|reads & writes| WIKI[wiki/]
+    CLAUDE -->|follows rules from| SCHEMA[CLAUDE.md]
     YOU -->|browses| OBSIDIAN([Obsidian])
     OBSIDIAN -->|renders| WIKI
 
-    subgraph "Three Layers"
+    subgraph Three_Layers
         RAW
         WIKI
         SCHEMA
     end
 
-    subgraph "Operations"
-        INGEST[Ingest: source -> wiki pages]
-        QUERY[Query: question -> answer + maybe new page]
-        LINT[Lint: health-check the wiki]
+    subgraph Skills
+        BOOTSTRAP[wiki-bootstrap]
+        INGEST[wiki-ingest]
+        QUERY[wiki-query]
+        LINT[wiki-lint]
     end
 
-    LLM --> INGEST
-    LLM --> QUERY
-    LLM --> LINT
+    CLAUDE --> BOOTSTRAP
+    CLAUDE --> INGEST
+    CLAUDE --> QUERY
+    CLAUDE --> LINT
 ```
 
-## Daily workflow
+## Plugin layout
 
-Once set up, your workflow is three operations:
-
-| Operation | What you do | What the LLM does |
-|-----------|------------|-------------------|
-| **Ingest** | Drop a source into `raw/` and say "ingest this" | Reads the source, writes a summary page, updates entity/concept pages, updates `index.md`, appends to `log.md` |
-| **Query** | Ask a question | Searches the wiki, synthesizes an answer. Good answers get filed as new wiki pages |
-| **Lint** | Say "lint the wiki" | Finds orphan pages, stale claims, missing cross-references, contradictions. Fixes what it can, flags the rest |
+```
+.claude-plugin/
+  plugin.json                   Plugin manifest
+  marketplace.json              Single-plugin marketplace (for local install)
+skills/
+  wiki-bootstrap/               SKILL.md + templates/
+  wiki-ingest/                  SKILL.md
+  wiki-query/                   SKILL.md
+  wiki-lint/                    SKILL.md
+origin/                         Pattern docs this plugin is based on
+  llm-wiki.md                   Karpathy's original idea file
+  llm-wiki-v2.md                agentmemory scaling extensions
+  obsidian-conventions.md       Formatting/frontmatter/wikilink rules
+  CREDITS.md                    Acknowledgements
+README.md
+LICENSE
+```
 
 ## Scaling up
 
-The `config/LLM-WIKI-v2.md` file describes advanced patterns you can adopt as your wiki grows:
+[`origin/llm-wiki-v2.md`](origin/llm-wiki-v2.md) covers advanced patterns worth adopting as your wiki grows:
 
-- **Confidence scoring** -- facts carry weight based on source count and recency
-- **Knowledge graph** -- typed entities and relationships, not just flat pages
-- **Hybrid search** -- BM25 + vector + graph traversal when `index.md` gets too big
-- **Automation hooks** -- auto-ingest on new files, auto-lint on schedule
-- **Consolidation tiers** -- working memory -> episodic -> semantic -> procedural
-- **Multi-agent** -- multiple LLMs or people contributing to the same wiki
+- **Confidence scoring** — already part of the default schema.
+- **Knowledge graph** — typed entities and relationships beyond flat wikilinks.
+- **Hybrid search** — BM25 + vector + graph traversal when `index.md` outgrows a single read.
+- **Automation hooks** — auto-ingest on new files in `raw/`, scheduled lint. *Not yet shipped in this plugin; tracked as future work.*
+- **Consolidation tiers** — working → episodic → semantic → procedural memory.
+- **Multi-agent / shared vaults** — several contributors on one wiki.
 
 Start minimal. Add layers when you feel the need.
 
 ## Recommended Obsidian plugins
 
-- **Graph View** (built-in) -- visualize connections between pages
-- **Dataview** -- query page frontmatter as structured data
-- **Obsidian Web Clipper** -- browser extension to clip articles as markdown sources
-- **Marp Slides** -- generate presentations from wiki content
+- **Graph View** (built-in) — visualize connections between pages.
+- **Dataview** — query page frontmatter as structured data.
+- **Obsidian Web Clipper** — browser extension to clip articles as markdown sources.
+- **Marp Slides** — generate presentations from wiki content.
+
+## Roadmap
+
+- Hooks: auto-ingest on new files in `raw/`, scheduled lint.
+- Optional search backend (e.g. [qmd](https://github.com/tobi/qmd)) for vaults past a few hundred pages.
+- Publish to a public Claude Code marketplace when one stabilises.
 
 ## License
 
@@ -167,5 +231,4 @@ Start minimal. Add layers when you feel the need.
 
 ## Credits
 
-- [Andrej Karpathy](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) -- original LLM Wiki idea
-- [agentmemory](https://github.com/rohitg00/agentmemory) -- lifecycle and scaling patterns (v2)
+See [`origin/CREDITS.md`](origin/CREDITS.md).
