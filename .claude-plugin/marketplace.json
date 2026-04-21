@@ -1,0 +1,13 @@
+{
+  "name": "llm-wiki",
+  "owner": {
+    "name": "Bruno Mentges"
+  },
+  "plugins": [
+    {
+      "name": "llm-wiki",
+      "source": "./",
+      "description": "Build and maintain personal knowledge bases with Claude. Four skills: wiki-bootstrap, wiki-ingest, wiki-query, wiki-lint."
+    }
+  ]
+}
